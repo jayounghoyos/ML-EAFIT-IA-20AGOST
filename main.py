@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.tree import DecisionTreeRegressor  # <-- Importar Decision Tree
 
 st.set_page_config(
     page_title="Entrenamiento de Regresión",
@@ -113,23 +114,41 @@ ridge_mse = mean_squared_error(y_test, y_ridge_pred)
 st.subheader("Resultados del Modelo Ridge")
 st.write(f"Mean Squared Error en test: {ridge_mse:.4f}")
 
-# Comparativa de errores
+# Entrenamiento del modelo Decision Tree
+st.subheader("Modelo Decision Tree")
+st.markdown(
+    """
+    **¿Qué necesitas para usar un árbol de decisión?**
+    - Tener instalado `scikit-learn` (ya está en requirements.txt).
+    - Importar `DecisionTreeRegressor` de `sklearn.tree`.
+    - Ajustar hiperparámetros como `max_depth` para evitar sobreajuste.
+    - Los árboles de decisión pueden modelar relaciones no lineales y son fáciles de interpretar.
+    """
+)
+max_depth = st.slider("Selecciona la profundidad máxima del árbol:", 1, 10, 3)
+dt_model = DecisionTreeRegressor(max_depth=max_depth, random_state=42)
+dt_model.fit(X_train, y_train)
+y_dt_pred = dt_model.predict(X_test)
+dt_mse = mean_squared_error(y_test, y_dt_pred)
+st.write(f"Mean Squared Error en test (Decision Tree): {dt_mse:.4f}")
+
+# Comparativa de errores (ahora incluye Decision Tree)
 st.subheader("Comparativa de Errores")
 error_df = pd.DataFrame({
-    "Modelo": ["Linear", "Ridge"],
-    "Mean Squared Error": [mse, ridge_mse]
+    "Modelo": ["Linear", "Ridge", "Decision Tree"],
+    "Mean Squared Error": [mse, ridge_mse, dt_mse]
 })
 st.bar_chart(error_df.set_index("Modelo"))
 
-# Predicción de nuevos datos
-st.subheader("Predicción de Nuevos Datos")
+# Predicción de nuevos datos con Decision Tree
+st.subheader("Predicción de Nuevos Datos (Decision Tree)")
 st.caption("Ejemplo: 0.1,0.2,0.3,0.4,0.5,0.6")
-new_data = st.text_input("Ingresa los valores de las features separadas por comas:")
-if new_data:
+new_data_dt = st.text_input("Ingresa los valores de las features separadas por comas (Decision Tree):")
+if new_data_dt:
     try:
-        new_data_np = np.array([[float(i) for i in new_data.split(",")]])
-        prediccion_nueva = model.predict(new_data_np)
-        st.write(f"Predicción: {prediccion_nueva[0]:.4f}")
+        new_data_np_dt = np.array([[float(i) for i in new_data_dt.split(",")]])
+        prediccion_nueva_dt = dt_model.predict(new_data_np_dt)
+        st.write(f"Predicción (Decision Tree): {prediccion_nueva_dt[0]:.4f}")
     except Exception as e:
         st.error(f"Error en la entrada: {e}")
 
