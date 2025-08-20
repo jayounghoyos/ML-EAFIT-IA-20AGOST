@@ -1,20 +1,74 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+st.set_page_config(
+    page_title="Entrenamiento de Regresión",
+    page_icon="📈",
+    layout="wide"
+)
 
 st.title("Dashboard de Entrenamiento de Regresión")
 
-# Generar datos sintéticos 30x7
-np.random.seed(42)
-X = np.random.rand(30, 6)  # 6 features
-y = np.random.rand(30)     # target
+# Leer datos desde el CSV
+df = pd.read_csv("data.csv")
 
-df = pd.DataFrame(X, columns=[f"Feature_{i+1}" for i in range(6)])
-df["Target"] = y
+# Separar features y target
+X = df.drop("Target", axis=1).values
+y = df["Target"].values
 
+# --- EDA Creativo ---
+st.header("Análisis Exploratorio de Datos (EDA)")
+
+# Estadísticas descriptivas
+st.subheader("Estadísticas Descriptivas")
+st.dataframe(df.describe().T)
+
+# Histograma de cada feature
+st.subheader("Distribución de las Features")
+selected_feature = st.selectbox("Selecciona una feature para ver su histograma:", df.columns[:-1])
+fig_hist, ax_hist = plt.subplots()
+ax_hist.hist(df[selected_feature], bins=10, color="skyblue", edgecolor="black")
+ax_hist.set_title(f"Histograma de {selected_feature}")
+st.pyplot(fig_hist)
+
+# Matriz de correlación
+st.subheader("Matriz de Correlación")
+corr = df.corr()
+st.dataframe(corr)
+st.write("Mapa de calor de correlación:")
+fig, ax = plt.subplots()
+sns.heatmap(corr, annot=True, cmap="viridis", ax=ax)
+st.pyplot(fig)
+
+# Pairplot (muestra solo si el usuario lo solicita)
+if st.checkbox("Mostrar pairplot (puede tardar unos segundos)"):
+    fig2 = sns.pairplot(df, diag_kind="hist", corner=True, palette="viridis")
+    st.pyplot(fig2.figure)
+
+# Boxplot de las features
+st.subheader("Boxplot de las Features")
+fig3, ax3 = plt.subplots()
+df.iloc[:, :-1].boxplot(ax=ax3)
+st.pyplot(fig3)
+
+# Gráfico de dispersión entre dos features seleccionables
+st.subheader("Gráfico de dispersión entre dos features")
+feature_x = st.selectbox("Eje X", df.columns[:-1], key="x")
+feature_y = st.selectbox("Eje Y", df.columns[:-1], key="y")
+fig_scatter, ax_scatter = plt.subplots()
+ax_scatter.scatter(df[feature_x], df[feature_y], color="purple")
+ax_scatter.set_xlabel(feature_x)
+ax_scatter.set_ylabel(feature_y)
+ax_scatter.set_title(f"Scatter: {feature_x} vs {feature_y}")
+st.pyplot(fig_scatter)
+
+# Datos de entrenamiento
 st.subheader("Datos de Entrenamiento (30x7)")
 st.dataframe(df)
 
@@ -35,10 +89,9 @@ st.write(f"Mean Squared Error en test: {mse:.4f}")
 # Mostrar coeficientes
 st.subheader("Coeficientes del Modelo")
 coef_df = pd.DataFrame({
-    "Feature": [f"Feature_{i+1}" for i in range(6)],
+    "Feature": df.columns[:-1],
     "Coeficiente": model.coef_
 })
-
 st.dataframe(coef_df)
 
 # Gráfico de dispersión de las predicciones vs valores reales
@@ -51,7 +104,6 @@ st.subheader("Gráfico de Coeficientes")
 st.bar_chart(coef_df.set_index("Feature")["Coeficiente"].abs())
 
 # Ajuste de hiperparámetros (ejemplo simple con alpha de Ridge)
-from sklearn.linear_model import Ridge
 alpha = st.slider("Selecciona el valor de alpha para Ridge:", 0.01, 10.0, 0.1)
 ridge_model = Ridge(alpha=alpha)
 ridge_model.fit(X_train, y_train)
@@ -67,13 +119,24 @@ error_df = pd.DataFrame({
     "Modelo": ["Linear", "Ridge"],
     "Mean Squared Error": [mse, ridge_mse]
 })
-
 st.bar_chart(error_df.set_index("Modelo"))
 
 # Predicción de nuevos datos
 st.subheader("Predicción de Nuevos Datos")
+st.caption("Ejemplo: 0.1,0.2,0.3,0.4,0.5,0.6")
 new_data = st.text_input("Ingresa los valores de las features separadas por comas:")
 if new_data:
-    new_data_np = np.array([[float(i) for i in new_data.split(",")]])
-    prediccion_nueva = model.predict(new_data_np)
-    st.write(f"Predicción: {prediccion_nueva[0]:.4f}")
+    try:
+        new_data_np = np.array([[float(i) for i in new_data.split(",")]])
+        prediccion_nueva = model.predict(new_data_np)
+        st.write(f"Predicción: {prediccion_nueva[0]:.4f}")
+    except Exception as e:
+        st.error(f"Error en la entrada: {e}")
+
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
