@@ -20,7 +20,6 @@ venv/
 .vscode/
 
 # Data files
-*.csv
 *.tsv
 *.h5
 *.hdf5
